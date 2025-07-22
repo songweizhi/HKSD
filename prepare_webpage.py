@@ -17,7 +17,6 @@ python3 /Users/songweizhi/PycharmProjects/HKSD/prepare_webpage.py
 ########################################################################################################################
 
 # read in sample metadata
-
 photo_section_str = ''
 col_index = dict()
 line_num_index = 0
