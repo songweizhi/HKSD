@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Species Map with Metadata</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css" />
+  <style>
+    #map {
+      height: 100vh;
+      width: 100%;
+    }
+    .popup-content img {
+      max-width: 150px;
+      margin-top: 5px;
+      display: block;
+      cursor: pointer;
+    }
+    .popup-content {
+      font-family: Arial, sans-serif;
+      font-size: 14px;
+      line-height: 1.3;
+    }
+    .leaflet-popup-content, .popup-content {
+      user-select: text;
+    }
+    .cluster-grid {
+      display: grid;
+      gap: 10px;
+    }
+    .cluster-item {
+      border: 1px solid #ccc;
+      padding: 6px;
+      border-radius: 6px;
+      background: #f9f9f9;
+    }
+    .cluster-item img {
+      max-width: 100%;
+      margin-top: 5px;
+      cursor: pointer;
+    }
+    .control-panel {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 1000;
+      background: white;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-family: Arial, sans-serif;
+      font-size: 14px;
+    }
+    .control-panel select, .control-panel button {
+      margin-top: 5px;
+      display: block;
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <div class="control-panel">
+    <label for="taxonFilter">Taxon:</label>
+    <select id="taxonFilter"><option value="all">All</option></select>
+    <label for="locationFilter">Location:</label>
+    <select id="locationFilter"><option value="all">All</option></select>
+    <label for="sourceFilter">Source:</label>
+    <select id="sourceFilter"><option value="all">All</option></select>
+    <button id="toggleClustering">Disable Clustering</button>
+  </div>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
+  <script>
+    const map = L.map("map").setView([22.3193, 114.1694], 11);
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
+      attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+      subdomains: "abcd",
+      maxZoom: 20,
+    }).addTo(map);
+
+    const speciesData = [
+      
+      {accession: "hksd_s1", photo: "doc/images/Basalt_island_HaliclonaEM101059May2022.jpg", taxon: "To be determined", loci: "", loci_eng: "Basalt island", loci_chi: "火石洲", lat: 22.3157, lng: 114.3654, desc: "Haliclona EM101059", coord: "22.3157/114.3654", source: "Markus Rummel", date: "7/4/2022", link: "na"},
+      {accession: "hksd_s2", photo: "doc/images/Basalt_island_HaliclonaEM100267_1.jpg", taxon: "To be determined", loci: "", loci_eng: "Basalt island", loci_chi: "火石洲", lat: 22.3157, lng: 114.3654, desc: "Haliclona EM100267_1", coord: "22.3157/114.3654", source: "Markus Rummel", date: "09/27/2021", link: "na"},
+      {accession: "hksd_s3", photo: "doc/images/Basalt_island_ChondrillaEM108591July2022.jpg", taxon: "To be determined", loci: "", loci_eng: "Basalt island", loci_chi: "火石洲", lat: 22.3157, lng: 114.3654, desc: "Chondrilla EM108591", coord: "22.3157/114.3654", source: "Markus Rummel", date: "07/29/2022", link: "na"},
+      {accession: "hksd_s4", photo: "doc/images/Hoi_Ha_Wan_MycaleEM100241.jpg", taxon: "To be determined", loci: "", loci_eng: "Hoi Ha Wan", loci_chi: "海下湾", lat: 22.4699, lng: 114.3337, desc: "Mycale EM100241", coord: "22.4699/114.3337", source: "Markus Rummel", date: "09/26/2021", link: "na"},
+      {accession: "hksd_s5", photo: "doc/images/Hoi_Ha_Wan_ChondrillaEM100221_2.jpg", taxon: "To be determined", loci: "", loci_eng: "Hoi Ha Wan", loci_chi: "海下湾", lat: 22.4699, lng: 114.3337, desc: "Chondrilla EM100221_2", coord: "22.4699/114.3337", source: "Markus Rummel", date: "09/25/2021", link: "na"},
+      {accession: "hksd_s6", photo: "doc/images/Ninepin_Island_Spheciospongia_vagbundusP9102415.jpg", taxon: "To be determined", loci: "", loci_eng: "Ninepin Island", loci_chi: "果洲群岛", lat: 22.2635, lng: 114.3562, desc: "Spheciospongia vagbundus P9102415", coord: "22.2635/114.3562", source: "Markus Rummel", date: "10/8/2022", link: "na"},
+      {accession: "hksd_s7", photo: "doc/images/Pak_Lap_Tsai_Spheciospongia_vagbundusP1010052.jpg", taxon: "To be determined", loci: "", loci_eng: "Pak Lap Tsai", loci_chi: "白腊仔", lat: 22.3531, lng: 114.3645, desc: "Spheciospongia vagbundus P1010052", coord: "22.3531/114.3645", source: "Markus Rummel", date: "2/1/2022", link: "na"},
+      {accession: "hksd_s8", photo: "doc/images/Wong_Ngai_Chau_HaliclonaEM100294.jpg", taxon: "To be determined", loci: "", loci_eng: "Wong Ngai Chau", loci_chi: "黃泥洲", lat: 22.3448, lng: 114.3698, desc: "Haliclona EM100294", coord: "22.3448/114.3698", source: "Markus Rummel", date: "11/1/2021", link: "na"},
+      {accession: "hksd_s9", photo: "doc/images/Wong_Ngai_Chau_HaliclonaEM530228April2023.jpg", taxon: "To be determined", loci: "", loci_eng: "Wong Ngai Chau", loci_chi: "黃泥洲", lat: 22.3448, lng: 114.3698, desc: "Haliclona EM530228", coord: "22.3448/114.3698", source: "Markus Rummel", date: "04/21/2023", link: "na"},
+      {accession: "hksd_s10", photo: "doc/images/Wong_Ngai_Chau_HaliclonaHaliclonaP1010029_2.jpg", taxon: "To be determined", loci: "", loci_eng: "Wong Ngai Chau", loci_chi: "黃泥洲", lat: 22.3448, lng: 114.3698, desc: "Haliclona Haliclona P1010029_2", coord: "22.3448/114.3698", source: "Markus Rummel", date: "9/10/2021", link: "na"},
+      {accession: "hksd_s11", photo: "doc/images/Wong_Ngai_Chau_HaliclonaP1011072.jpg", taxon: "To be determined", loci: "", loci_eng: "Wong Ngai Chau", loci_chi: "黃泥洲", lat: 22.3448, lng: 114.3698, desc: "Haliclona P1011072", coord: "22.3448/114.3698", source: "Markus Rummel", date: "05/31/2021", link: "na"},
+      {accession: "hksd_s12", photo: "doc/images/Tai_Long_Wan_Mycale humilisEM530228Feb2023.jpg", taxon: "To be determined", loci: "", loci_eng: "Tai Long Wan", loci_chi: "大浪灣", lat: 22.4033, lng: 114.3933, desc: "Mycale humilis EM530228", coord: "22.4033/114.3933", source: "Markus Rummel", date: "4/10/2023", link: "na"},
+      {accession: "hksd_s13", photo: "doc/images/Tai_Long_Wan_ChondrillaEM100890April2022_1.jpg", taxon: "To be determined", loci: "", loci_eng: "Tai Long Wan", loci_chi: "大浪灣", lat: 22.4033, lng: 114.3933, desc: "Chondrilla EM100890", coord: "22.4033/114.3933", source: "Markus Rummel", date: "6/3/2022", link: "na"},
+      {accession: "hksd_s14", photo: "doc/images/Breakers_Reef_HaliclonaEM100028.jpg", taxon: "To be determined", loci: "", loci_eng: "Breakers Reef", loci_chi: "打浪排", lat: 22.4667, lng: 114.4168, desc: "Haliclona EM100028", coord: "22.4667/114.4168", source: "Markus Rummel", date: "9/9/2021", link: "na"},
+      {accession: "hksd_s15", photo: "doc/images/Breakers_Reef_HaliclonaEM100033.jpg", taxon: "To be determined", loci: "", loci_eng: "Breakers Reef", loci_chi: "打浪排", lat: 22.4667, lng: 114.4168, desc: "Haliclona EM100033", coord: "22.4667/114.4168", source: "Markus Rummel", date: "9/9/2021", link: "na"},
+      {accession: "hksd_s16", photo: "doc/images/Breakers_Reef_HaliclonaEM100125_3.jpg", taxon: "To be determined", loci: "", loci_eng: "Breakers Reef", loci_chi: "打浪排", lat: 22.4667, lng: 114.4168, desc: "Haliclona EM100125_3", coord: "22.4667/114.4168", source: "Markus Rummel", date: "8/1/2021", link: "na"},
+      {accession: "hksd_s17", photo: "doc/images/Breakers_Reef_HaliclonaEM100129.jpg", taxon: "To be determined", loci: "", loci_eng: "Breakers Reef", loci_chi: "打浪排", lat: 22.4667, lng: 114.4168, desc: "Haliclona EM100129", coord: "22.4667/114.4168", source: "Markus Rummel", date: "09/13/2021", link: "na"},
+      {accession: "hksd_s18", photo: "doc/images/Round_Island_MycaleEM100152.jpg", taxon: "To be determined", loci: "", loci_eng: "Round Island", loci_chi: "銀洲", lat: 22.2158, lng: 114.1854, desc: "Mycale EM100152", coord: "22.2158/114.1854", source: "Markus Rummel", date: "03/22/2021", link: "na"},
+      {accession: "hksd_s19", photo: "doc/images/Bluff_Island_IMG_1896.jpg", taxon: "To be determined", loci: "", loci_eng: "Bluff Island", loci_chi: "沙塘口山", lat: 22.3208, lng: 114.3498, desc: "na", coord: "22.3208/114.3498", source: "Shan Zhang and Weizhi Song", date: "5/12/2023", link: "na"},
+      {accession: "hksd_s20", photo: "doc/images/Bluff_Island_IMG_1901.jpg", taxon: "To be determined", loci: "", loci_eng: "Bluff Island", loci_chi: "沙塘口山", lat: 22.3208, lng: 114.3498, desc: "na", coord: "22.3208/114.3498", source: "Shan Zhang and Weizhi Song", date: "5/12/2023", link: "na"},
+      {accession: "hksd_s21", photo: "doc/images/Bluff_Island_IMG_1919.jpg", taxon: "To be determined", loci: "", loci_eng: "Bluff Island", loci_chi: "沙塘口山", lat: 22.3208, lng: 114.3498, desc: "na", coord: "22.3208/114.3498", source: "Shan Zhang and Weizhi Song", date: "5/12/2023", link: "na"},
+      {accession: "hksd_s22", photo: "doc/images/Po_Toi_O_Renmao_sponge.jpg", taxon: "To be determined", loci: "", loci_eng: "Po Toi O", loci_chi: "布袋澳", lat: 22.2749, lng: 114.2942, desc: "Tian RM, Wang Y, Bougouffa S, Gao ZM, Cai L, Zhang WP, Bajic V, Qian PY. Effect of copper treatment on the composition and function of the bacterial community in the sponge Haliclona cymaeformis. MBio. 2014 Dec 31;5(6):10-128.", coord: "22.2749/114.2942", source: "Literature", date: "2014", link: "https://doi.org/10.1128/mbio.01980-14"},
+      {accession: "hksd_s23", photo: "doc/images/HKUST_BBQ_site.png", taxon: "To be determined", loci: "", loci_eng: "HKUST BBQ Site", loci_chi: "香港科技大学", lat: 22.3385, lng: 114.2671, desc: "na", coord: "22.3385/114.2671", source: "Shan Zhang and Weizhi Song", date: "5/11/2025", link: "na"},
+      
+    ];
+    const clusterGroup = L.markerClusterGroup();
+    const normalGroup = L.layerGroup();
+    let clusteringEnabled = true;
+    let isHoveringPopup = false;
+    let popupTimeout = null;
+
+    function createPopupContent(species) {
+      return `<div class="popup-content">
+        <strong>Accession:</strong> ${species.accession}<br/>
+        <strong>Taxon:</strong> ${species.taxon}<br/>
+        <strong>Location (eng):</strong> ${species.loci_eng}<br/>
+        <strong>Location (chi):</strong> ${species.loci_chi}<br/>
+        <strong>Coordinates (lat/long):</strong> ${species.coord}<br/>
+        <strong>Source:</strong> ${species.source}<br/>
+        <strong>Description:</strong> ${species.desc}<br/>
+        <a href="${species.photo}" target="_blank">
+          <img src="${species.photo}" alt="${species.taxon} photo"/>
+        </a>
+      </div>`;
+    }
+
+    function generateMarkers(data, group) {
+      group.clearLayers();
+      data.forEach((species) => {
+        const popupContent = createPopupContent(species);
+        const marker = L.marker([species.lat, species.lng])
+          .bindPopup(popupContent)
+          .on("mouseover", function () {
+            this.openPopup();
+          })
+          .on("mouseout", function () {
+            if (!isHoveringPopup) popupTimeout = setTimeout(() => this.closePopup(), 300);
+          });
+        group.addLayer(marker);
+      });
+    }
+
+    function updateFilters() {
+      const taxonSet = new Set();
+      const locationSet = new Set();
+      const sourceSet = new Set();
+      speciesData.forEach(s => {
+        taxonSet.add(s.taxon);
+        locationSet.add(s.loci_eng);
+        sourceSet.add(s.source);
+      });
+      const taxonSelect = document.getElementById("taxonFilter");
+      const locationSelect = document.getElementById("locationFilter");
+      const sourceSelect = document.getElementById("sourceFilter");
+      for (const t of taxonSet) taxonSelect.innerHTML += `<option value="${t}">${t}</option>`;
+      for (const l of locationSet) locationSelect.innerHTML += `<option value="${l}">${l}</option>`;
+      for (const s of sourceSet) sourceSelect.innerHTML += `<option value="${s}">${s}</option>`;
+    }
+
+    function filterAndRender() {
+      const tVal = document.getElementById("taxonFilter").value;
+      const lVal = document.getElementById("locationFilter").value;
+      const sVal = document.getElementById("sourceFilter").value;
+      const filtered = speciesData.filter(s =>
+        (tVal === "all" || s.taxon === tVal) &&
+        (lVal === "all" || s.loci_eng === lVal) &&
+        (sVal === "all" || s.source === sVal));
+      if (clusteringEnabled) {
+        generateMarkers(filtered, clusterGroup);
+        map.removeLayer(normalGroup);
+        map.addLayer(clusterGroup);
+      } else {
+        generateMarkers(filtered, normalGroup);
+        map.removeLayer(clusterGroup);
+        map.addLayer(normalGroup);
+      }
+    }
+
+    document.getElementById("taxonFilter").addEventListener("change", filterAndRender);
+    document.getElementById("locationFilter").addEventListener("change", filterAndRender);
+    document.getElementById("sourceFilter").addEventListener("change", filterAndRender);
+
+    document.getElementById("toggleClustering").addEventListener("click", () => {
+      clusteringEnabled = !clusteringEnabled;
+      document.getElementById("toggleClustering").innerText = clusteringEnabled ? "Disable Clustering" : "Enable Clustering";
+      filterAndRender();
+    });
+
+    map.on("popupopen", function (e) {
+      const popupEl = e.popup.getElement();
+      popupEl.addEventListener("mouseenter", () => {
+        isHoveringPopup = true;
+        clearTimeout(popupTimeout);
+      });
+      popupEl.addEventListener("mouseleave", () => {
+        isHoveringPopup = false;
+        popupTimeout = setTimeout(() => map.closePopup(), 300);
+      });
+    });
+
+    clusterGroup.on("clustermouseover", function (a) {
+      const markers = a.layer.getAllChildMarkers();
+      const columns = Math.min(markers.length, 5);
+      let content = `<div class="cluster-grid" style="grid-template-columns: repeat(${columns}, 1fr);">`;
+      markers.forEach((m) => {
+        content += `<div class="cluster-item">${m.getPopup().getContent()}</div>`;
+      });
+      content += "</div>";
+      const popup = L.popup({ maxWidth: 1200, autoPan: false })
+        .setLatLng(a.layer.getLatLng())
+        .setContent(content)
+        .openOn(map);
+    });
+
+    clusterGroup.on("clustermouseout", function () {
+      if (!isHoveringPopup) {
+        popupTimeout = setTimeout(() => map.closePopup(), 300);
+      }
+    });
+
+    map.addLayer(clusterGroup);
+    updateFilters();
+    filterAndRender();
+  </script>
+</body>
+</html>
